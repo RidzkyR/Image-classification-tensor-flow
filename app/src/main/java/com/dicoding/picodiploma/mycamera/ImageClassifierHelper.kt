@@ -17,11 +17,11 @@ import org.tensorflow.lite.task.vision.classifier.Classifications
 import org.tensorflow.lite.task.vision.classifier.ImageClassifier
 
 class ImageClassifierHelper(
-    var threshold: Float = 0.1f,
-    var maxResults: Int = 3,
-    val modelName: String = "mobilenet_V1.tflite",
+    private var threshold: Float = 0.1f,
+    private var maxResults: Int = 3,
+    private val modelName: String = "mobilenet_v1.tflite", // penulisan value harus benar besar kecilnya
     val context: Context,
-    val classifierListener: ClassifierListener?,
+    val classifierListener: ClassifierListener?
 ) {
     private var imageClassifier: ImageClassifier? = null
 
@@ -38,9 +38,13 @@ class ImageClassifierHelper(
         optionsBuilder.setBaseOptions(baseOptionsBuilder.build())
 
         try{
-            imageClassifier = ImageClassifier.createFromFileAndOptions(context,modelName,optionsBuilder.build())
+            imageClassifier = ImageClassifier.createFromFileAndOptions(
+                context,
+                modelName,
+                optionsBuilder.build()
+            )
         }catch (e: IllegalStateException){
-            classifierListener?.onError(context.getString(R.string.image_classfier_failed))
+            classifierListener?.onError(context.getString(R.string.image_classifier_failed))
             Log.e(TAG,e.message.toString())
         }
     }
@@ -54,7 +58,9 @@ class ImageClassifierHelper(
             .add(ResizeOp(224, 224, ResizeOp.ResizeMethod.NEAREST_NEIGHBOR))
             .add(CastOp(DataType.UINT8))
             .build()
+
         val tensorImage = imageProcessor.process(TensorImage.fromBitmap(toBitmap(image))) // mengubah bitmap ke tensorImage
+
         val imageProcessingOptions = ImageProcessingOptions.builder()
             .setOrientation(getOrientationFromRotation(image.imageInfo.rotationDegrees))
             .build()
@@ -69,15 +75,6 @@ class ImageClassifierHelper(
         )
     }
 
-    private fun getOrientationFromRotation(rotation: Int): ImageProcessingOptions.Orientation {
-        return when (rotation) {
-            Surface.ROTATION_270 -> ImageProcessingOptions.Orientation.BOTTOM_RIGHT
-            Surface.ROTATION_180 -> ImageProcessingOptions.Orientation.RIGHT_BOTTOM
-            Surface.ROTATION_90 -> ImageProcessingOptions.Orientation.TOP_LEFT
-            else -> ImageProcessingOptions.Orientation.RIGHT_TOP
-        }
-    }
-
     //mengubah imageProxy ke Bitmap
     private fun toBitmap(image: ImageProxy): Bitmap {
         val bitmapBuffer = Bitmap.createBitmap(
@@ -88,6 +85,15 @@ class ImageClassifierHelper(
         image.use { bitmapBuffer.copyPixelsFromBuffer(image.planes[0].buffer) }
         image.close()
         return bitmapBuffer
+    }
+
+    private fun getOrientationFromRotation(rotation: Int): ImageProcessingOptions.Orientation {
+        return when (rotation) {
+            Surface.ROTATION_270 -> ImageProcessingOptions.Orientation.BOTTOM_RIGHT
+            Surface.ROTATION_180 -> ImageProcessingOptions.Orientation.RIGHT_BOTTOM
+            Surface.ROTATION_90 -> ImageProcessingOptions.Orientation.TOP_LEFT
+            else -> ImageProcessingOptions.Orientation.RIGHT_TOP
+        }
     }
 
     interface ClassifierListener {
